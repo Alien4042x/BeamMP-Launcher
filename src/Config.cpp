@@ -16,6 +16,7 @@ namespace fs = std::filesystem;
 
 std::string Branch;
 std::filesystem::path CachingDirectory = std::filesystem::path("./Resources");
+std::string CustomGamePath;
 bool deleteDuplicateMods = false;
 
 void ParseConfig(const nlohmann::json& d) {
@@ -49,6 +50,20 @@ void ParseConfig(const nlohmann::json& d) {
         deleteDuplicateMods = d["DeleteDuplicateMods"].get<bool>();
     }
 
+    if (d.contains("CustomGamePath") && d["CustomGamePath"].is_string()) {
+        CustomGamePath = d["CustomGamePath"].get<std::string>();
+        if (!CustomGamePath.empty()) {
+            info("Using custom game path: " + CustomGamePath);
+        }
+    }
+
+    // Backward compatibility: check old "SteamPath" parameter
+    if (d.contains("SteamPath") && d["SteamPath"].is_string() && CustomGamePath.empty()) {
+        CustomGamePath = d["SteamPath"].get<std::string>();
+        if (!CustomGamePath.empty()) {
+            info("Using custom game path (legacy SteamPath): " + CustomGamePath);
+        }
+    }
 }
 
 void ConfigInit() {
@@ -73,7 +88,8 @@ void ConfigInit() {
                 R"({
     "Port": 4444,
     "Build": "Default",
-    "CachingDirectory": "./Resources"
+    "CachingDirectory": "./Resources",
+    "CustomGamePath": ""
 })";
             cfg.close();
         } else {

@@ -4,7 +4,6 @@
  SPDX-License-Identifier: AGPL-3.0-or-later
 */
 
-
 #include "Http.h"
 #include <Logger.h>
 #include <Network/network.hpp>
@@ -110,7 +109,7 @@ bool HTTP::Download(const std::string& IP, const beammp_fs_string& Path, const s
         return false;
     }
 
-    std::ofstream File(Path, std::ios::binary);
+    std::ofstream File(Path.c_str(), std::ios::binary);
     if (File.is_open()) {
         File << Ret;
         File.close();

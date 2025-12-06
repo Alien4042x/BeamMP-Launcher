@@ -4,18 +4,24 @@
  SPDX-License-Identifier: AGPL-3.0-or-later
 */
 
-
 #include <filesystem>
-#include "Utils.h"
 #if defined(_WIN32)
-#include <shlobj_core.h>
+#include <shlobj.h>
 #elif defined(__linux__)
+#include "vdf_parser.hpp"
+#include <pwd.h>
+#include <unistd.h>
+#include <vector>
+#elif defined(__APPLE__)
 #include "vdf_parser.hpp"
 #include <pwd.h>
 #include <unistd.h>
 #include <vector>
 #endif
 #include "Logger.h"
+#include "Network/network.hpp"
+#include "Utils.h"
+
 #include <fstream>
 #include <string>
 #include <thread>
@@ -38,6 +44,8 @@ beammp_fs_string GetGameDir() {
 #if defined(_WIN32)
     return GameDir.substr(0, GameDir.find_last_of('\\'));
 #elif defined(__linux__)
+    return GameDir.substr(0, GameDir.find_last_of('/'));
+#elif defined(__APPLE__)
     return GameDir.substr(0, GameDir.find_last_of('/'));
 #endif
 }
@@ -102,7 +110,6 @@ std::wstring QueryKey(HKEY hKey, int ID) {
                 LONG dwRes = RegQueryValueExW(hKey, achValue, nullptr, nullptr, buffer, &lpData);
                 std::wstring data = (wchar_t*)(buffer);
                 std::wstring key = achValue;
-
 
                 switch (ID) {
                 case 1:
@@ -231,12 +238,16 @@ void LegitimacyCheck() {
     std::filesystem::path homeDir = pw->pw_dir;
 
     // Right now only steam is supported
-    std::vector<std::filesystem::path> steamappsCommonPaths = {
-        ".steam/root/steamapps", // default
-        ".steam/steam/steamapps", // Legacy Steam installations
-        ".var/app/com.valvesoftware.Steam/.steam/root/steamapps", // flatpak
-        "snap/steam/common/.local/share/Steam/steamapps" // snap
-    };
+    std::vector<std::filesystem::path> steamappsCommonPaths;
+
+    if (!CustomGamePath.empty()) {
+        steamappsCommonPaths.push_back(CustomGamePath + "/steamapps");
+    }
+
+    steamappsCommonPaths.push_back(".steam/root/steamapps");
+    steamappsCommonPaths.push_back(".steam/steam/steamapps");
+    steamappsCommonPaths.push_back(".var/app/com.valvesoftware.Steam/.steam/root/steamapps");
+    steamappsCommonPaths.push_back("snap/steam/common/.local/share/Steam/steamapps");
 
     std::filesystem::path steamappsPath;
     std::filesystem::path libraryFoldersPath;
@@ -268,7 +279,60 @@ void LegitimacyCheck() {
     std::ifstream libraryFolders(libraryFoldersPath);
     auto root = tyti::vdf::read(libraryFolders);
     for (auto folderInfo : root.childs) {
-        if ((folderInfo.second->childs["apps"]->attribs).contains("284160") && std::filesystem::exists(folderInfo.second->attribs["path"] + "/steamapps/common/BeamNG.drive/integrity.json")){
+        if ((folderInfo.second->childs["apps"]->attribs).contains("284160") && std::filesystem::exists(folderInfo.second->attribs["path"] + "/steamapps/common/BeamNG.drive/integrity.json")) {
+            GameDir = folderInfo.second->attribs["path"] + "/steamapps/common/BeamNG.drive/";
+            break;
+        }
+    }
+    if (GameDir.empty()) {
+        error("The game directory was not found.");
+        return;
+    }
+#elif defined(__APPLE__)
+    struct passwd* pw = getpwuid(getuid());
+    std::filesystem::path homeDir = pw->pw_dir;
+
+    std::vector<std::filesystem::path> steamappsCommonPaths;
+
+    if (!CustomGamePath.empty()) {
+        steamappsCommonPaths.push_back(CustomGamePath + "/steamapps");
+    }
+
+    steamappsCommonPaths.push_back("Library/Application Support/Steam/steamapps");
+    steamappsCommonPaths.push_back(".steam/root/steamapps");
+    steamappsCommonPaths.push_back(".steam/steam/steamapps");
+
+    std::filesystem::path steamappsPath;
+    std::filesystem::path libraryFoldersPath;
+    bool steamappsFolderFound = false;
+    bool libraryFoldersFound = false;
+
+    for (const auto& path : steamappsCommonPaths) {
+        steamappsPath = homeDir / path;
+        if (std::filesystem::exists(steamappsPath)) {
+            steamappsFolderFound = true;
+            libraryFoldersPath = steamappsPath / "libraryfolders.vdf";
+            if (std::filesystem::exists(libraryFoldersPath)) {
+                libraryFoldersPath = libraryFoldersPath;
+                libraryFoldersFound = true;
+                break;
+            }
+        }
+    }
+
+    if (!steamappsFolderFound) {
+        error("Unsupported Steam installation on macOS.");
+        return;
+    }
+    if (!libraryFoldersFound) {
+        error("libraryfolders.vdf is missing.");
+        return;
+    }
+
+    std::ifstream libraryFolders(libraryFoldersPath);
+    auto root = tyti::vdf::read(libraryFolders);
+    for (auto folderInfo : root.childs) {
+        if (std::filesystem::exists(folderInfo.second->attribs["path"] + "/steamapps/common/BeamNG.drive/integrity.json")) {
             GameDir = folderInfo.second->attribs["path"] + "/steamapps/common/BeamNG.drive/";
             break;
         }

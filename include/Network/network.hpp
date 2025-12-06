@@ -4,17 +4,16 @@
  SPDX-License-Identifier: AGPL-3.0-or-later
 */
 
-
 #pragma once
 #include <filesystem>
 #include <string>
 
 #ifdef __linux__
 #include "linuxfixes.h"
+#include <arpa/inet.h>
 #include <bits/types/siginfo_t.h>
 #include <cstdint>
 #include <sys/ucontext.h>
-#include <arpa/inet.h>
 #endif
 
 void NetReset();
@@ -31,6 +30,7 @@ extern uint64_t UDPSock;
 extern uint64_t TCPSock;
 extern std::string Branch;
 extern std::filesystem::path CachingDirectory;
+extern std::string CustomGamePath;
 extern bool deleteDuplicateMods;
 extern bool TCPTerminate;
 extern std::string LastIP;

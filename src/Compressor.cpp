@@ -33,29 +33,35 @@ std::vector<char> Comp(std::span<const char> input) {
 }
 
 std::vector<char> DeComp(std::span<const char> input) {
-    std::vector<char> output_buffer(std::min<size_t>(input.size() * 5, 15 * 1024 * 1024));
+    z_stream strm{};
+    strm.next_in = (Bytef*)input.data();
+    strm.avail_in = input.size();
 
-    uLongf output_size = output_buffer.size();
+    // Start with a large buffer - 256KB
+    std::vector<char> output(256 * 1024);
 
-    while (true) {
-        int res = uncompress(
-            reinterpret_cast<Bytef*>(output_buffer.data()),
-            &output_size,
-            reinterpret_cast<const Bytef*>(input.data()),
-            static_cast<uLongf>(input.size()));
-        if (res == Z_BUF_ERROR) {
-            if (output_buffer.size() > 30 * 1024 * 1024) {
-                throw std::runtime_error("decompressed packet size of 30 MB exceeded");
-            }
-            debug("zlib uncompress() failed, trying with 2x buffer size of " + std::to_string(output_buffer.size() * 2));
-            output_buffer.resize(output_buffer.size() * 2);
-            output_size = output_buffer.size();
-        } else if (res != Z_OK) {
-            error("zlib uncompress() failed (code: " + std::to_string(res) + ", message: " + zError(res) + ")");
-            throw std::runtime_error("zlib uncompress() failed");
-        } else if (res == Z_OK) {
-            break;
+    strm.next_out = (Bytef*)output.data();
+    strm.avail_out = output.size();
+
+    // 15 = zlib header (zlib stream)
+    inflateInit2(&strm, 15);
+
+    int ret;
+    while ((ret = inflate(&strm, Z_NO_FLUSH)) == Z_OK) {
+        if (strm.avail_out == 0) {
+            size_t oldSize = output.size();
+            output.resize(oldSize * 2);
+            strm.next_out = (Bytef*)(output.data() + oldSize);
+            strm.avail_out = oldSize;
         }
-    }    output_buffer.resize(output_size);
-    return output_buffer;
+    }
+
+    inflateEnd(&strm);
+
+    if (ret != Z_STREAM_END) {
+        throw std::runtime_error("inflate failed");
+    }
+
+    output.resize(strm.total_out);
+    return output;
 }

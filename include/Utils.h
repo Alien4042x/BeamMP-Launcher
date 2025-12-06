@@ -22,7 +22,7 @@
 #include <cerrno>
 #include <cstring>
 #include <stdexcept>
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__)
 #include <sys/socket.h>
 #include "linuxfixes.h"
 #else

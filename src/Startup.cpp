@@ -77,7 +77,7 @@ Version::Version(const std::array<uint8_t, 3>& v)
 beammp_fs_string GetEN() {
 #if defined(_WIN32)
     return L"BeamMP-Launcher.exe";
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__APPLE__)
     return "BeamMP-Launcher";
 #endif
 }
@@ -149,7 +149,7 @@ void URelaunch() {
     std::this_thread::sleep_for(std::chrono::seconds(1));
     exit(1);
 }
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__APPLE__)
 void ReLaunch() {
     std::string Arg;
     for (int c = 2; c <= options.argc; c++) {
@@ -180,7 +180,7 @@ void URelaunch() {
 void CheckName() {
 #if defined(_WIN32)
     std::wstring DN = GetEN(), CDir = Utils::ToWString(options.executable_name), FN = CDir.substr(CDir.find_last_of('\\') + 1);
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__APPLE__)
     std::string DN = GetEN(), CDir = options.executable_name, FN = CDir.substr(CDir.find_last_of('/') + 1);
 #endif
     if (FN != DN) {
@@ -352,8 +352,8 @@ void CheckForUpdates(const std::string& CV) {
     if (FileHash != LatestHash && IsOutdated(Version(VersionStrToInts(GetVer() + GetPatch())), Version(VersionStrToInts(LatestVersion)))) {
         if (!options.no_update) {
             info("Launcher update " + LatestVersion + " found!");
-#if defined(__linux__)
-            error("Auto update is NOT implemented for the Linux version. Please update manually ASAP as updates contain security patches.");
+#if defined(__linux__) || defined(__APPLE__)
+            error("Auto update is NOT implemented for this platform. Please update manually ASAP as updates contain security patches.");
 #else
             info("Downloading Launcher update " + LatestHash);
             std::wstring DownloadLocation = GetBP() / (beammp_wide("new_") + GetEN());

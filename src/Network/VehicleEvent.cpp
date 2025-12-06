@@ -81,14 +81,17 @@ std::string TCPRcv(SOCKET Sock) {
         UUl("Invalid Socket");
         return "";
     }
+
     int32_t Header;
     int Temp;
     std::vector<char> Data(sizeof(Header));
+
     Temp = recv(Sock, Data.data(), sizeof(Header), MSG_WAITALL);
     if (!CheckBytes(Temp)) {
         UUl("Socket Closed Code 3");
         return "";
     }
+
     memcpy(&Header, Data.data(), sizeof(Header));
 
     if (!CheckBytes(Temp)) {
@@ -97,7 +100,16 @@ std::string TCPRcv(SOCKET Sock) {
     }
 
     Data.resize(Header, 0);
-    Temp = recv(Sock, Data.data(), Header, MSG_WAITALL);
+    size_t received = 0;
+
+    while (received < Header) {
+        int chunk = recv(Sock, Data.data() + received, Header - received, 0);
+        if (chunk <= 0) {
+            return "";
+        }
+        received += chunk;
+    }
+
     if (!CheckBytes(Temp)) {
         UUl("Socket Closed Code 5");
         return "";
@@ -108,20 +120,17 @@ std::string TCPRcv(SOCKET Sock) {
     if (Ret.substr(0, 4) == "ABG:") {
         auto substr = Ret.substr(4);
         try {
-            auto res = DeComp(std::span<char>(substr.data(), substr.size()));
+            auto res = DeComp(std::span<const char>(substr.data(), substr.size()));
             Ret = std::string(res.data(), res.size());
-        } catch (const std::runtime_error& err) {
-            // this happens e.g. when we're out of memory, or when we get incomplete data
-            error("Decompression failed");
+
+        } catch (const std::runtime_error&) {
             return "";
         }
     }
 
-#ifdef DEBUG
-    // debug("Parsing from server -> " + std::to_string(Ret.size()));
-#endif
     if (Ret[0] == 'E' || Ret[0] == 'K')
         UUl(Ret.substr(1));
+
     return Ret;
 }
 

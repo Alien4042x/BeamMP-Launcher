@@ -8,7 +8,7 @@
 #include "Utils.h"
 #if defined(_WIN32)
 #include <shlobj.h>
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__APPLE__)
 #include "vdf_parser.hpp"
 #include <pwd.h>
 #include <spawn.h>
@@ -127,6 +127,18 @@ std::filesystem::path GetGamePath() {
     Path += "current/";
     return Path;
 }
+#elif defined(__APPLE__)
+std::filesystem::path GetGamePath() {
+    // Native macOS game launch is experimental; CrossOver/Wine builds still use the Windows path.
+    struct passwd* pw = getpwuid(getuid());
+    std::string homeDir = pw->pw_dir;
+
+    std::string Path = homeDir + "/Library/Application Support/BeamNG.drive/";
+    std::string Ver = CheckVer(GetGameDir());
+    Ver = Ver.substr(0, Ver.find('.', Ver.find('.') + 1));
+    Path += "current/";
+    return Path;
+}
 #endif
 
 #if defined(_WIN32)
@@ -208,6 +220,29 @@ void StartGame(std::string Dir) {
     } else {
         waitpid(pid, &status, 0);
         error("Game Closed! launcher closing soon");
+    }
+
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+    exit(2);
+}
+#elif defined(__APPLE__)
+void StartGame(std::string Dir) {
+    info("Starting BeamNG.drive on macOS...");
+    std::string appPath = Dir + "/BeamNG.drive.app";
+
+    std::string command = "open -a \"" + appPath + "\"";
+    for (int i = 0; i < options.game_arguments_length; i++) {
+        command += " --args ";
+        command += options.game_arguments[i];
+    }
+
+    int result = system(command.c_str());
+
+    if (result != 0) {
+        error("Failed to Launch the game! launcher closing soon");
+    } else {
+        info("Game Launched!");
+        info("Launcher will close when game exits");
     }
 
     std::this_thread::sleep_for(std::chrono::seconds(5));

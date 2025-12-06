@@ -1,15 +1,47 @@
-cmake-build-debug
-cmake-build-release
+# CMake build folders
+cmake-build-debug/
+cmake-build-release/
+build/
+build_windows/
+release/
+
+# IDE
 /.idea/
+.vscode/
+
+# Logs
 *.log
+
+# Binaries
+*.exe
+*.dll
+*.obj
+bin/
+out/
+
+# Scripts
 /*.sh
-/*.obj
-/*.exe
+
+# VCPKG
+vcpkg/
+vcpkg_installed/
+
+# Cache
 .cache/
 .https_debug/
+cache/
+
+# Launcher runtime files
 Launcher.cfg
 Resources/
-bin/
-compile_commands.json
 key
-out/
+
+# CMake extras
+compile_commands.json
+CMakeFiles/
+CMakeCache.txt
+
+# Misc
+*.tmp
+*.bak
+*.old

@@ -1,23 +1,148 @@
-# BeamMP-Launcher
+# BeamMP Launcher — macOS Experimental Fork
 
-The launcher is the way we communitcate to outside the game, it does a few automated actions such as but not limited to: downloading the mod, launching the game, and create a connection to a server.
+This is an **experimental fork** of the BeamMP Launcher, focused on getting **BeamNG.drive multiplayer running on macOS** using CrossOver + D3DMetal.
 
-## [Getting started](https://docs.beammp.com/game/getting-started/)
+👉 **This is NOT an official BeamMP launcher**  
+👉 **Windows users should use the official release**
+
+This fork exists only for testing and research purposes.
+
+---
+
+## ⚠️ Status (Experimental)
+
+Multiplayer **launches**, **connects to servers**, and **vehicles sync correctly** — but stability still varies.
+
+Common issues I'm investigating:
+- occasional freezes during heavy physics events  
+- reconnect loops  
+- TCP/UDP desync in some situations  
+- sensitivity to Wine/CrossOver versions
+
+This fork includes several fixes:
+- improved zlib compression/decompression handling  
+- corrected TCP/UDP packet reception (partial reads, buffer issues)
+
+Some of these problems are also reported on the official BeamMP GitHub.
+A few of them match issues that I already fixed in this fork
+(for example the zlib decompression failures that appear when the server sends a high volume of data quickly).
+
+Because of this, please keep in mind that the official launcher itself
+is not always perfectly stable — especially under heavier network load.
+So not everything you experience is caused by macOS or this fork.
+
+https://github.com/BeamMP/BeamMP-Launcher/issues
+
+---
+
+## 🔧 How to Build (macOS → Windows cross‑compile)
+
+A simplified build guide:
+
+### Requirements  
+- Homebrew  
+- CMake  
+- Python 3  
+- llvm-mingw (ucrt, macOS universal) — https://github.com/mstorsjo/llvm-mingw/releases  
+- vcpkg (handled automatically)
+
+### Steps
+```
+git clone https://github.com/Alien4042x/BeamMP-Launcher.git
+cd BeamMP-Launcher
+chmod +x build_windows_on_macos.sh
+./build_windows_on_macos.sh
+```
+
+Output:
+```
+release/BeamMP-Launcher.exe
+```
+
+⚠️ **Important:**  
+To ensure the launcher works correctly, you must also copy all required DLL files from release folder:
+
+## 🚀 How to Install & Run on macOS (CrossOver / CX)
+
+This fork is meant for macOS users running BeamNG.drive through **CrossOver**.
+
+### 1️⃣ Download BeamMP Client
+Before using this launcher, download the official BeamMP client:
+https://beammp.com/download
+
+Do NOT run the downloaded Windows launcher — we will replace it.
+
+### 2️⃣ Download macOS Experimental Launcher Build
+Go to the **Releases** tab of this fork and download the ZIP containing:
+- `BeamMP-Launcher.exe`
+- required `.dll` files
+
+Extract the ZIP.
+
+### 3️⃣ Copy the launcher into your CrossOver Bottle
+Move all extracted files into:
+
+```
+/Users/<your username>/<Crossover/CXBottles>/Steam/drive_c/users/crossover/AppData/Roaming/BeamMP-Launcher
+```
+
+(If the folder doesn't exist, run the official client once — it will create it.)
+
+### 4️⃣ Start Steam (inside CrossOver)
+BeamMP requires Steam running in the same bottle.
+
+Open CrossOver → start the Steam app from that bottle.
+
+### 5️⃣ Run the Launcher
+Double‑click:
+
+```
+BeamMP-Launcher.exe
+```
+
+A black console window should appear first — then the BeamMP launcher UI.
+
+### 6️⃣ First-time Setup
+On first launch:
+- open BeamNG through Steam
+- check that the **Multiplayer** tab appears in the main menu
+- close the game
+
+❗ *Sometimes the first run doesn’t hook correctly.*  
+
+### 7️⃣ Start Multiplayer
+Launch the BeamMP launcher again, then run the game through it.
+
+### 8️⃣ Successful Load Indicator
+If you see:
+
+```
+Mod caching directory: ./Resources
+```
+
+…then everything is hooked correctly and MP should start working.
+
+---
+
+## 🧪 macOS Compatibility Notes
+
+This fork currently targets:
+- CrossOver 25  
+- Steam BeamNG (Windows build)
+
+This project **does not modify the game** — only the launcher.
+
+---
+
+## 📫 Feedback / Issues
+
+If you want to test or report bugs:
+- open a GitHub Issue  
+- or comment under my latest YouTube video showcasing BeamNG multiplayer on macOS
+
+---
 
 ## License
 
-BeamMP Launcher, a launcher for the BeamMP mod for BeamNG.drive
-Copyright (C) 2024 BeamMP Ltd., BeamMP team and contributors.
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as published
-by the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
+This project remains licensed under the original **GNU AGPL v3**.  
+BeamMP Launcher © 2024 BeamMP Ltd., team & contributors.

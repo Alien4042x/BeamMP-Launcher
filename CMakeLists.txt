@@ -14,6 +14,10 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
 
 add_compile_definitions(CPPHTTPLIB_OPENSSL_SUPPORT)
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    add_compile_definitions(_WIN32_WINNT=0x0A00)
+endif()
+
 file(GLOB source_files "src/*.cpp" "src/*/*.cpp" "src/*/*.hpp" "include/*.h"  "include/*/*.h" "include/*/*/*.h" "include/*.hpp"  "include/*/*.hpp" "include/*/*/*.hpp")
 find_package(httplib CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
@@ -27,14 +31,19 @@ if (WIN32)
     find_package(OpenSSL REQUIRED)
     target_link_libraries(${PROJECT_NAME} PRIVATE
             ZLIB::ZLIB OpenSSL::SSL OpenSSL::Crypto ws2_32 httplib::httplib nlohmann_json::nlohmann_json CURL::libcurl)
+elseif (APPLE)
+    find_package(ZLIB REQUIRED)
+    find_package(OpenSSL REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+            ZLIB::ZLIB OpenSSL::SSL OpenSSL::Crypto httplib::httplib nlohmann_json::nlohmann_json CURL::libcurl)
 elseif (UNIX)
     find_package(ZLIB REQUIRED)
     find_package(OpenSSL REQUIRED)
     target_link_libraries(${PROJECT_NAME} PRIVATE
-            ZLIB::ZLIB OpenSSL::SSL OpenSSL::Crypto CURL::libcurl)
-else(WIN32) #MINGW
+            ZLIB::ZLIB OpenSSL::SSL OpenSSL::Crypto httplib::httplib nlohmann_json::nlohmann_json CURL::libcurl)
+else(WIN32)
     add_definitions("-D_WIN32_WINNT=0x0600")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Os -s --static")
-    target_link_libraries(${PROJECT_NAME} ssl crypto ws2_32 ssp crypt32 z CURL::libcurl)
+    target_link_libraries(${PROJECT_NAME} ssl crypto ws2_32 ssp crypt32 z httplib::httplib nlohmann_json::nlohmann_json CURL::libcurl)
 endif(WIN32)
 target_include_directories(${PROJECT_NAME} PRIVATE "include")
