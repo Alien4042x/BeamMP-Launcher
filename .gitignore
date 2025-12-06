@@ -20,7 +20,9 @@ bin/
 out/
 
 # Scripts
+# Ignore all sh except the build script
 /*.sh
+!build_windows_on_macos.sh
 
 # VCPKG
 vcpkg/
