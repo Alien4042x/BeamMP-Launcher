@@ -94,7 +94,8 @@ void UDPClientMain(const std::string& IP, int Port) {
     inet_pton(AF_INET, IP.c_str(), &ToServer->sin_addr);
     UDPSock = socket(AF_INET, SOCK_DGRAM, 0);
     if (!magic.empty())
-        UDPSend(magic);
+        for (int i = 0; i < 10; i++)
+            UDPSend(magic);
     GameSend("P" + std::to_string(ClientID));
     TCPSend("H", TCPSock);
     UDPSend("p");
