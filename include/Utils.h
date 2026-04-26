@@ -5,6 +5,13 @@
 */
 
 #pragma once
+#if defined(__linux__) || defined(__APPLE__)
+#include <sys/socket.h>
+#include "linuxfixes.h"
+#else
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#endif
 #include <cassert>
 #include <filesystem>
 #include <fstream>
@@ -22,13 +29,6 @@
 #include <cerrno>
 #include <cstring>
 #include <stdexcept>
-#if defined(__linux__) || defined(__APPLE__)
-#include <sys/socket.h>
-#include "linuxfixes.h"
-#else
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#endif
 
 #ifdef _WIN32
 #define beammp_fs_string std::wstring
@@ -215,7 +215,7 @@ namespace Utils {
                 throw std::runtime_error("EVP_DigestInit_ex2() failed");
             }
 
-            std::ifstream stream(filename, std::ios::binary);
+            std::ifstream stream(filename.c_str(), std::ios::binary);
 
             const size_t FileSize = std::filesystem::file_size(filename);
             size_t Read = 0;

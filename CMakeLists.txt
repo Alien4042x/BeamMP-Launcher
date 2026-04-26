@@ -16,6 +16,7 @@ add_compile_definitions(CPPHTTPLIB_OPENSSL_SUPPORT)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     add_compile_definitions(_WIN32_WINNT=0x0A00)
+    add_compile_options("-Wno-#warnings")
 endif()
 
 file(GLOB source_files "src/*.cpp" "src/*/*.cpp" "src/*/*.hpp" "include/*.h"  "include/*/*.h" "include/*/*/*.h" "include/*.hpp"  "include/*/*.hpp" "include/*/*/*.hpp")
@@ -30,7 +31,7 @@ if (WIN32)
     find_package(ZLIB REQUIRED)
     find_package(OpenSSL REQUIRED)
     target_link_libraries(${PROJECT_NAME} PRIVATE
-            ZLIB::ZLIB OpenSSL::SSL OpenSSL::Crypto ws2_32 httplib::httplib nlohmann_json::nlohmann_json CURL::libcurl)
+            ZLIB::ZLIB OpenSSL::SSL OpenSSL::Crypto ws2_32 wintrust crypt32 httplib::httplib nlohmann_json::nlohmann_json CURL::libcurl)
 elseif (APPLE)
     find_package(ZLIB REQUIRED)
     find_package(OpenSSL REQUIRED)
