@@ -7,6 +7,7 @@
 #include "Http.h"
 #include "Network/network.hpp"
 #include "Security/Init.h"
+#include "Utils.h"
 #include <cstdlib>
 #include <regex>
 #if defined(_WIN32)
@@ -188,7 +189,8 @@ void CoreSend(std::string data) {
     std::lock_guard lock(sendMutex);
     
     if (CoreSocket != -1) {
-        int res = send(CoreSocket, (data + "\n").c_str(), int(data.size()) + 1, 0);
+        auto ToSend = Utils::PrependHeader(data);
+        int res = send(CoreSocket, ToSend.data(), ToSend.size(), 0);
         if (res < 0) {
             debug("(Core) send failed with error: " + std::to_string(WSAGetLastError()));
         }
@@ -278,7 +280,7 @@ void Parse(std::string Data, SOCKET CSocket) {
                 Ping = "-2";
             else
                 Ping = std::to_string(ping);
-            Data = std::string(UlStatus) + "\n" + "Up" + Ping;
+            Data = "Up" + Ping;
         }
         break;
     case 'M':
@@ -348,51 +350,29 @@ void Parse(std::string Data, SOCKET CSocket) {
         Data.clear();
         break;
     }
-    if (!Data.empty())
-        CoreSend(Data);
+    if (!Data.empty() && CSocket != -1) {
+        auto ToSend = Utils::PrependHeader(Data);
+        int res = send(CSocket, ToSend.data(), ToSend.size(), 0);
+        if (res < 0) {
+            debug("(Core) send failed with error: " + std::to_string(WSAGetLastError()));
+        }
+    }
 }
 void GameHandler(SOCKET Client) {
     CoreSocket = Client;
-    int32_t Size, Rcv;
+    std::vector<char> data{};
     int Temp;
     char Header[10] = { 0 };
     do {
-        Rcv = 0;
-        do {
-            Temp = recv(Client, &Header[Rcv], 1, 0);
-            if (Temp < 1)
-                break;
-            if (!isdigit(Header[Rcv]) && Header[Rcv] != '>') {
-                error("(Core) Invalid lua communication");
-                KillSocket(Client);
-                return;
-            }
-        } while (Header[Rcv++] != '>');
-        if (Temp < 1)
-            break;
-        if (std::from_chars(Header, &Header[Rcv], Size).ptr[0] != '>') {
-            debug("(Core) Invalid lua Header -> " + std::string(Header, Rcv));
+        try {
+            Utils::ReceiveFromGame(Client, data);
+            Parse(std::string(data.data(), data.size()), Client);
+        } catch (const std::exception& e) {
+            error(std::string("Error while receiving from game on core: ") + e.what());
             break;
         }
-        std::string Ret(Size, 0);
-        Rcv = 0;
-
-        do {
-            Temp = recv(Client, &Ret[Rcv], Size - Rcv, 0);
-            if (Temp < 1)
-                break;
-            Rcv += Temp;
-        } while (Rcv < Size);
-        if (Temp < 1)
-            break;
-
-        Parse(Ret, Client);
-    } while (Temp > 0);
-    if (Temp == 0) {
-        debug("(Core) Connection closing");
-    } else {
-        debug("(Core) recv failed with error: " + std::to_string(WSAGetLastError()));
-    }
+    } while (true);
+    debug("(Core) Connection closing");
     NetReset();
     KillSocket(Client);
 }

@@ -19,45 +19,6 @@
 #include <mutex>
 #include <nlohmann/json.hpp>
 
-void WriteHttpDebug(const httplib::Client& client, const std::string& method, const std::string& target, const httplib::Result& result) try {
-    const std::filesystem::path folder = ".https_debug";
-    std::filesystem::create_directories(folder);
-    if (!std::filesystem::exists(folder / "WHAT IS THIS FOLDER.txt")) {
-        std::ofstream ignore { folder / "WHAT IS THIS FOLDER.txt" };
-        ignore << "This folder exists to help debug current issues with the backend. Do not share this folder with anyone but BeamMP staff. It contains detailed logs of any failed http requests." << std::endl;
-    }
-    const auto file = folder / (method + ".json");
-    // 1 MB limit
-    if (std::filesystem::exists(file) && std::filesystem::file_size(file) > 1'000'000) {
-        std::filesystem::rename(file, file.generic_string() + ".bak");
-    }
-
-    std::ofstream of { file, std::ios::app };
-    nlohmann::json js {
-        { "utc", std::chrono::system_clock::now().time_since_epoch().count() },
-        { "target", target },
-        { "client_info", {
-                             { "openssl_verify_result", client.get_openssl_verify_result() },
-                             { "host", client.host() },
-                             { "port", client.port() },
-                             { "socket_open", client.is_socket_open() },
-                             { "valid", client.is_valid() },
-                         } },
-    };
-    if (result) {
-        auto value = result.value();
-        js["result"] = {};
-        js["result"]["body"] = value.body;
-        js["result"]["status"] = value.status;
-        js["result"]["headers"] = value.headers;
-        js["result"]["version"] = value.version;
-        js["result"]["location"] = value.location;
-        js["result"]["reason"] = value.reason;
-    }
-    of << js.dump();
-} catch (const std::exception& e) {
-    error(e.what());
-}
 
 static size_t CurlWriteCallback(void* contents, size_t size, size_t nmemb, void* userp) {
     std::string* Result = reinterpret_cast<std::string*>(userp);
