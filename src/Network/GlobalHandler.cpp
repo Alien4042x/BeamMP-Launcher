@@ -50,18 +50,11 @@ int KillSocket(uint64_t Dead) {
     return a;
 }
 
-bool CheckBytes(uint32_t Bytes) {
-    if (Bytes == 0) {
-        debug("(Proxy) Connection closing");
-        return false;
-    } else if (Bytes < 0) {
-        debug("(Proxy) send failed with error: " + std::to_string(WSAGetLastError()));
-        return false;
-    }
-    return true;
-}
-
 void GameSend(std::string_view Data) {
+    if (!GConnected) {
+        debug("Tried to call GameSend but socket was not connected. Data: " + std::string(Data));
+        return;
+    }
     static std::mutex Lock;
     std::scoped_lock Guard(Lock);
     auto ToSend = Utils::PrependHeader<std::string_view>(Data);
@@ -84,7 +77,7 @@ void ServerSend(std::string Data, bool Rel) {
         C = Data.at(0);
     if (C == 'O' || C == 'T')
         Ack = true;
-    if (C == 'N' || C == 'W' || C == 'Y' || C == 'V' || C == 'E' || C == 'C')
+    if (C == 'N' || C == 'W' || C == 'Y' || C == 'V' || C == 'E' || C == 'C' || C == 't')
         Rel = true;
     if (compressBound(Data.size()) > 1024)
         Rel = true;
@@ -206,6 +199,7 @@ void ParserAsync(std::string_view Data) {
         return;
     case 'U':
         magic = Data.substr(1);
+        return;
     default:
         break;
     }

@@ -28,14 +28,19 @@ int LastPort;
 std::string LastIP;
 SOCKET TCPSock = -1;
 
-bool CheckBytes(int32_t Bytes) {
+bool CheckBytes(int32_t Bytes, int32_t Expected) {
     if (Bytes == 0) {
-        debug("(TCP) Connection closing... CheckBytes(16)");
+        debug("(TCP) Connection closing...");
         Terminate = true;
         return false;
     } else if (Bytes < 0) {
         debug("(TCP CB) recv failed with error: " + std::to_string(WSAGetLastError()));
         KillSocket(TCPSock);
+        Terminate = true;
+        return false;
+    }
+    if (Expected != -1 && Bytes != Expected) {
+        debug(std::format("(TCP) Short recv detected, expected {} bytes, got {} bytes", Expected, Bytes));
         Terminate = true;
         return false;
     }
@@ -75,6 +80,24 @@ void TCPSend(const std::string& Data, uint64_t Sock) {
     } while (Sent < Size);
 }
 
+int RecvWaitAll(int sockfd, char *buf, int len) {
+    // handle MSG_WAITALL not actually filling the whole buffer
+    // happens frequently in wine, and can also happen natively when the OS pauses the execution for various reasons
+    int offset = 0;
+    while (offset < len) {
+        int recv_status = recv(sockfd, &buf[offset], len - offset, MSG_WAITALL);
+        if (recv_status == 0) {
+            // do not discard received data when the other side closes the socket cleanly
+            return offset;
+        }
+        if (recv_status == -1) {
+            return -1;
+        }
+        offset += recv_status;
+    }
+    return offset;
+}
+
 std::string TCPRcv(SOCKET Sock) {
     if (Sock == -1) {
         Terminate = true;
@@ -85,9 +108,8 @@ std::string TCPRcv(SOCKET Sock) {
     int32_t Header;
     int Temp;
     std::vector<char> Data(sizeof(Header));
-
-    Temp = recv(Sock, Data.data(), sizeof(Header), MSG_WAITALL);
-    if (!CheckBytes(Temp)) {
+    Temp = RecvWaitAll(Sock, Data.data(), sizeof(Header));
+    if (!CheckBytes(Temp, sizeof(Header))) {
         UUl("Socket Closed Code 3");
         return "";
     }
@@ -100,17 +122,8 @@ std::string TCPRcv(SOCKET Sock) {
     }
 
     Data.resize(Header, 0);
-    size_t received = 0;
-
-    while (received < Header) {
-        int chunk = recv(Sock, Data.data() + received, Header - received, 0);
-        if (chunk <= 0) {
-            return "";
-        }
-        received += chunk;
-    }
-
-    if (!CheckBytes(Temp)) {
+    Temp = RecvWaitAll(Sock, Data.data(), Header);
+    if (!CheckBytes(Temp, Header)) {
         UUl("Socket Closed Code 5");
         return "";
     }
